@@ -1,0 +1,118 @@
+[
+  {
+    "id": "dest-1",
+    "name": "Candi Borobudur",
+    "category": "Budaya",
+    "cost": 50000,
+    "distance": 40.2,
+    "location": "Magelang, Jawa Tengah",
+    "description": "Candi Buddha terbesar di dunia yang megah, diakui sebagai warisan budaya dunia oleh UNESCO. Menyajikan pemandangan matahari terbit yang sangat memukau di atas stupa kuno.",
+    "facilities": [
+      "Area Parkir Luas",
+      "Toilet Bersih",
+      "Mushola",
+      "Pemandu Wisata",
+      "Toko Souvenir",
+      "Pusat Informasi",
+      "Kursi Roda"
+    ],
+    "rides": [
+      "Museum Borobudur",
+      "Kereta Wisata Keliling",
+      "Sewa Sepeda",
+      "Taman Rekreasi Hijau"
+    ],
+    "imageUrl": "https://images.unsplash.com/photo-1584810359583-96fc3448beaa?auto=format\u0026fit=crop\u0026w=800\u0026q=80"
+  },
+  {
+    "id": "dest-2",
+    "name": "Pantai Kuta Bali",
+    "category": "Alam",
+    "cost": 15000,
+    "distance": 12.5,
+    "location": "Badung, Bali",
+    "description": "Pantai pasir putih legendaris yang terkenal di seluruh dunia. Merupakan pusat selancar, bersantai menikmati matahari terbenam yang romantis, dan memiliki garis pantai yang sangat panjang.",
+    "facilities": [
+      "Shower Umum",
+      "Penyewaan Payung Pantai",
+      "Toilet",
+      "Mushola Terdekat",
+      "Pusat Kuliner Pantai",
+      "Life Guard",
+      "Area Parkir"
+    ],
+    "rides": [
+      "Pusat Surfing (Selancar)",
+      "Banana Boat",
+      "Sewa Jet Ski",
+      "Pijat Tradisional Bali"
+    ],
+    "imageUrl": "https://images.unsplash.com/photo-1537996194471-e657df975ab4?auto=format\u0026fit=crop\u0026w=800\u0026q=80"
+  },
+  {
+    "id": "dest-3",
+    "name": "Gunung Bromo",
+    "category": "Petualangan",
+    "cost": 35000,
+    "distance": 110,
+    "location": "Probolinggo, Jawa Timur",
+    "description": "Gunung berapi aktif yang menawarkan pemandangan magis lautan pasir luas, kawah aktif yang menakjubkan, dan spot sunrise legendaris dari puncak Penanjakan.",
+    "facilities": [
+      "Toilet Umum",
+      "Mushola Penanjakan",
+      "Warung Kopi",
+      "Penyewaan Jaket Hangat",
+      "Area Parkir Jeep",
+      "Toko Souvenir"
+    ],
+    "rides": [
+      "Wisata Jeep 4x4",
+      "Berkuda di Pasir Berbisik",
+      "Pendakian Kawah Bromo",
+      "Foto Spot Sunrise Penanjakan"
+    ],
+    "imageUrl": "https://images.unsplash.com/photo-1602002418082-a4443e081dd1?auto=format\u0026fit=crop\u0026w=800\u0026q=80"
+  },
+  {
+    "id": "dest-5",
+    "name": "Taman Wisata Alam Raja Ampat",
+    "category": "Alam",
+    "cost": 500000,
+    "distance": 32,
+    "location": "Raja Ampat, Papua Barat",
+    "description": "Surga bawah laut terindah di dunia dengan keanekaragaman terumbu karang tertinggi. Menawarkan pemandangan gugusan pulau karang eksotis yang memanjakan mata.",
+    "facilities": [
+      "Pusat Diving \u0026 Snorkeling",
+      "Homestay Terapung",
+      "Pemandu Lokal Berlisensi",
+      "Kapal Speedboat",
+      "Toilet di Resort"
+    ],
+    "rides": [
+      "Diving (Menyelam)",
+      "Snorkeling Bersama Penyu",
+      "Island Hopping (Jelajah Pulau)",
+      "Trekking Puncak Wayag"
+    ],
+    "imageUrl": "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format\u0026fit=crop\u0026w=800\u0026q=80"
+  },
+  {
+    "id": "dest-736570",
+    "name": "Raja Ampat",
+    "category": "Alam",
+    "cost": 500000,
+    "distance": 12,
+    "location": "Lombok",
+    "description": "Wisata Alam yang terletak di lombok",
+    "facilities": [
+      "Toilet",
+      "Mushola",
+      "Parkir"
+    ],
+    "rides": [
+      "Jet Ski",
+      "Snorkling"
+    ],
+    "imageUrl": "https://images.unsplash.com/photo-1703769605297-cc74106244d9?q=80\u0026w=1484\u0026auto=format\u0026fit=crop\u0026ixlib=rb-4.1.0\u0026ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
+  }
+]
