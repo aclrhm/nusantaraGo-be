@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -372,6 +373,56 @@ func SequentialSearchByID(targetID string) (Destination, bool) {
 	return Destination{}, false
 }
 
+// SEQUENTIAL SEARCH KEYWORD
+// Mencari destinasi berdasarkan kata kunci di berbagai kolom secara berurutan
+func SequentialSearchByKeyword(query string) []Destination {
+
+	data := GetDestinations()
+	results := []Destination{}
+	lowerQuery := strings.ToLower(strings.TrimSpace(query))
+
+	for _, dest := range data {
+		matched := false
+
+		// Cek nama
+		if strings.Contains(strings.ToLower(dest.Name), lowerQuery) {
+			matched = true
+		}
+		// Cek deskripsi
+		if !matched && strings.Contains(strings.ToLower(dest.Description), lowerQuery) {
+			matched = true
+		}
+		// Cek lokasi
+		if !matched && strings.Contains(strings.ToLower(dest.Location), lowerQuery) {
+			matched = true
+		}
+		// Cek fasilitas
+		if !matched {
+			for _, fac := range dest.Facilities {
+				if strings.Contains(strings.ToLower(fac), lowerQuery) {
+					matched = true
+					break
+				}
+			}
+		}
+		// Cek wahana
+		if !matched {
+			for _, ride := range dest.Rides {
+				if strings.Contains(strings.ToLower(ride), lowerQuery) {
+					matched = true
+					break
+				}
+			}
+		}
+
+		if matched {
+			results = append(results, dest)
+		}
+	}
+
+	return results
+}
+
 // SELECTION SORT
 // Mengurutkan destinasi berdasarkan biaya tiket
 func SelectionSortByCost() []Destination {
@@ -397,22 +448,29 @@ func SelectionSortByCost() []Destination {
 	return data
 }
 
-func SelectionSortCostSlice(data []Destination) {
+// SelectionSortCostSlice mengurutkan destinasi berdasarkan biaya (in-place)
+// order: "asc" = termurah dulu, "desc" = termahal dulu
+func SelectionSortCostSlice(data []Destination, order string) {
 
 	n := len(data)
 
 	for i := 0; i < n-1; i++ {
 
-		minIdx := i
+		selectIdx := i
 
 		for j := i + 1; j < n; j++ {
-
-			if data[j].Cost < data[minIdx].Cost {
-				minIdx = j
+			if order == "desc" {
+				if data[j].Cost > data[selectIdx].Cost {
+					selectIdx = j
+				}
+			} else {
+				if data[j].Cost < data[selectIdx].Cost {
+					selectIdx = j
+				}
 			}
 		}
 
-		data[i], data[minIdx] = data[minIdx], data[i]
+		data[i], data[selectIdx] = data[selectIdx], data[i]
 	}
 }
 
@@ -485,8 +543,9 @@ func BinarySearchById(targetID string) (Destination, bool) {
 	return Destination{}, false
 }
 
-// Mengurutkan dari jarak terdekat ke terjauh
-func InsertionSortDistanceSlice(data []Destination) {
+// InsertionSortDistanceSlice mengurutkan destinasi berdasarkan jarak (in-place)
+// order: "asc" = terdekat dulu, "desc" = terjauh dulu
+func InsertionSortDistanceSlice(data []Destination, order string) {
 
 	for i := 1; i < len(data); i++ {
 
@@ -495,14 +554,46 @@ func InsertionSortDistanceSlice(data []Destination) {
 
 		j := i - 1
 
-		// Geser elemen yang lebih besar
-		for j >= 0 && data[j].Distance > key.Distance {
-
-			data[j+1] = data[j]
-			j--
+		// Geser elemen sesuai urutan
+		if order == "desc" {
+			for j >= 0 && data[j].Distance < key.Distance {
+				data[j+1] = data[j]
+				j--
+			}
+		} else {
+			for j >= 0 && data[j].Distance > key.Distance {
+				data[j+1] = data[j]
+				j--
+			}
 		}
 
 		// Sisipkan ke posisi yang tepat
+		data[j+1] = key
+	}
+}
+
+// InsertionSortFacilitiesSlice mengurutkan destinasi berdasarkan jumlah fasilitas (in-place)
+// order: "desc" = terlengkap dulu, "asc" = tersedikit dulu
+func InsertionSortFacilitiesSlice(data []Destination, order string) {
+
+	for i := 1; i < len(data); i++ {
+
+		key := data[i]
+		keyLen := len(key.Facilities)
+		j := i - 1
+
+		if order == "asc" {
+			for j >= 0 && len(data[j].Facilities) > keyLen {
+				data[j+1] = data[j]
+				j--
+			}
+		} else {
+			for j >= 0 && len(data[j].Facilities) < keyLen {
+				data[j+1] = data[j]
+				j--
+			}
+		}
+
 		data[j+1] = key
 	}
 }
