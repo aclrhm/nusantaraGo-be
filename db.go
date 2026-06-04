@@ -359,7 +359,6 @@ func DeleteDestination(id string) error {
 
 // SEQUENTIAL SEARCH
 // Mencari destinasi berdasarkan ID secara berurutan
-
 func SequentialSearchByID(targetID string) (Destination, bool) {
 
 	data := GetDestinations()
@@ -373,10 +372,8 @@ func SequentialSearchByID(targetID string) (Destination, bool) {
 	return Destination{}, false
 }
 
-
 // SELECTION SORT
 // Mengurutkan destinasi berdasarkan biaya tiket
-
 func SelectionSortByCost() []Destination {
 
 	data := GetDestinations()
@@ -467,7 +464,7 @@ func InsertionSortByID() []Destination {
 }
 
 // BINARY SEARCH
-func BinarySearchByID(targetID string) (Destination, bool) {
+func BinarySearchById(targetID string) (Destination, bool) {
 
 	data := InsertionSortByID()
 
@@ -475,14 +472,10 @@ func BinarySearchByID(targetID string) (Destination, bool) {
 	high := len(data) - 1
 
 	for low <= high {
-
 		mid := (low + high) / 2
-
 		if data[mid].ID == targetID {
 			return data[mid], true
-		}
-
-		if data[mid].ID < targetID {
+		} else if data[mid].ID < targetID {
 			low = mid + 1
 		} else {
 			high = mid - 1

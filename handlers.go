@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"math/rand"
 	"net/http"
-	"sort"
-	"strings"
 	"time"
 )
 
@@ -31,97 +29,14 @@ func sendJSON(w http.ResponseWriter, statusCode int, payload interface{}) {
 	json.NewEncoder(w).Encode(payload)
 }
 
-// getDestinationsHandler mengembalikan semua destinasi dengan filter pencarian, kategori, dan sorting
+// getDestinationsHandler mengembalikan semua destinasi tanpa filter pencarian dan sorting (diproses di frontend)
 func getDestinationsHandler(w http.ResponseWriter, r *http.Request) {
 	if enableCORS(w, r) {
 		return
 	}
 
 	allDestinations := GetDestinations()
-
-	// 1. Ekstrak filter query params
-	searchQuery := strings.ToLower(strings.TrimSpace(r.URL.Query().Get("search")))
-	categoryFilter := strings.ToLower(strings.TrimSpace(r.URL.Query().Get("category")))
-	sortBy := strings.ToLower(strings.TrimSpace(r.URL.Query().Get("sort")))
-
-	filteredDestinations := []Destination{}
-
-	// 2. Lakukan pencarian dan penyaringan kategori
-	for _, d := range allDestinations {
-		matchSearch := true
-		matchCategory := true
-
-		// Filter Kategori
-		if categoryFilter != "" && categoryFilter != "semua" {
-			if strings.ToLower(d.Category) != categoryFilter {
-				matchCategory = false
-			}
-		}
-
-		// Pencarian Kata Kunci
-		if searchQuery != "" {
-			found := strings.Contains(strings.ToLower(d.Name), searchQuery) ||
-				strings.Contains(strings.ToLower(d.Description), searchQuery) ||
-				strings.Contains(strings.ToLower(d.Location), searchQuery)
-			
-			// Cek juga di fasilitas
-			if !found {
-				for _, fac := range d.Facilities {
-					if strings.Contains(strings.ToLower(fac), searchQuery) {
-						found = true
-						break
-					}
-				}
-			}
-			// Cek di wahana
-			if !found {
-				for _, ride := range d.Rides {
-					if strings.Contains(strings.ToLower(ride), searchQuery) {
-						found = true
-						break
-					}
-				}
-			}
-
-			if !found {
-				matchSearch = false
-			}
-		}
-
-		if matchSearch && matchCategory {
-			filteredDestinations = append(filteredDestinations, d)
-		}
-	}
-
-	// 3. Pengurutan (Sorting)
-	switch sortBy {
-	case "distance_asc", "distance": // Jarak terdekat
-		sort.Slice(filteredDestinations, func(i, j int) bool {
-			return filteredDestinations[i].Distance < filteredDestinations[j].Distance
-		})
-	case "distance_desc": // Jarak terjauh
-		sort.Slice(filteredDestinations, func(i, j int) bool {
-			return filteredDestinations[i].Distance > filteredDestinations[j].Distance
-		})
-	case "cost_asc", "cost": // Biaya termurah
-		sort.Slice(filteredDestinations, func(i, j int) bool {
-			return filteredDestinations[i].Cost < filteredDestinations[j].Cost
-		})
-	case "cost_desc": // Biaya termahal
-		sort.Slice(filteredDestinations, func(i, j int) bool {
-			return filteredDestinations[i].Cost > filteredDestinations[j].Cost
-		})
-	case "facilities_desc", "facilities": // Fasilitas terbanyak
-		sort.Slice(filteredDestinations, func(i, j int) bool {
-			return len(filteredDestinations[i].Facilities) > len(filteredDestinations[j].Facilities)
-		})
-	case "facilities_asc": // Fasilitas tersedikit
-		sort.Slice(filteredDestinations, func(i, j int) bool {
-			return len(filteredDestinations[i].Facilities) < len(filteredDestinations[j].Facilities)
-		})
-	}
-
-	sendJSON(w, http.StatusOK, filteredDestinations)
+	sendJSON(w, http.StatusOK, allDestinations)
 }
 
 // getDestinationByIDHandler mengembalikan satu destinasi berdasarkan ID
@@ -287,7 +202,7 @@ func binarySearchHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	dest, found := BinarySearchByID(id)
+	dest, found := BinarySearchById(id)
 
 	if !found {
 		sendJSON(w, http.StatusNotFound,
