@@ -359,7 +359,6 @@ func DeleteDestination(id string) error {
 
 
 // SEQUENTIAL SEARCH
-// Mencari destinasi berdasarkan ID secara berurutan
 func SequentialSearchByID(targetID string) (Destination, bool) {
 
 	data := GetDestinations()
@@ -374,7 +373,6 @@ func SequentialSearchByID(targetID string) (Destination, bool) {
 }
 
 // SEQUENTIAL SEARCH KEYWORD
-// Mencari destinasi berdasarkan kata kunci di berbagai kolom secara berurutan
 func SequentialSearchByKeyword(query string) []Destination {
 
 	data := GetDestinations()
@@ -449,7 +447,6 @@ func SelectionSortByCost() []Destination {
 }
 
 // SelectionSortCostSlice mengurutkan destinasi berdasarkan biaya (in-place)
-// order: "asc" = termurah dulu, "desc" = termahal dulu
 func SelectionSortCostSlice(data []Destination, order string) {
 
 	n := len(data)
