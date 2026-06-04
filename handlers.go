@@ -224,7 +224,7 @@ func selectionSortCostHandler(w http.ResponseWriter, r *http.Request) {
 
 	data := GetDestinations()
 
-	SelectionSortCostSlice(data)
+	SelectionSortCostSlice(data, "asc")
 
 	sendJSON(w, http.StatusOK, data)
 }
@@ -237,7 +237,7 @@ func insertionSortDistanceHandler(w http.ResponseWriter, r *http.Request) {
 
 	data := GetDestinations()
 
-	InsertionSortDistanceSlice(data)
+	InsertionSortDistanceSlice(data, "asc")
 
 	sendJSON(w, http.StatusOK, data)
 }
