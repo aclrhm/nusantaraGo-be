@@ -22,6 +22,10 @@ func main() {
 	mux.HandleFunc("POST /api/destinations", createDestinationHandler)
 	mux.HandleFunc("PUT /api/destinations/{id}", updateDestinationHandler)
 	mux.HandleFunc("DELETE /api/destinations/{id}", deleteDestinationHandler)
+	mux.HandleFunc("GET /api/destinations/sequential-search", sequentialSearchHandler)
+	mux.HandleFunc("GET /api/destinations/binary-search", binarySearchHandler)
+	mux.HandleFunc("GET /api/destinations/selection-sort-cost", selectionSortCostHandler)
+	mux.HandleFunc("GET /api/destinations/insertion-sort-distance", insertionSortDistanceHandler)
 
 	// Route OPTIONS global sebagai penunjang preflight CORS jika diperlukan
 	mux.HandleFunc("OPTIONS /api/destinations", func(w http.ResponseWriter, r *http.Request) {
@@ -30,14 +34,15 @@ func main() {
 	mux.HandleFunc("OPTIONS /api/destinations/{id}", func(w http.ResponseWriter, r *http.Request) {
 		enableCORS(w, r)
 	})
+	
 
 	// 4. Konfigurasi alamat server
 	port := "8081"
 	serverAddr := fmt.Sprintf("0.0.0.0:%s", port)
 
-	fmt.Println("==================================================")
+
 	fmt.Println("APLIKASI PARIWISATA BACKEND (GOLANG) RUNNING")
-	fmt.Println("==================================================")
+
 	fmt.Printf("Server aktif di: http://localhost:%s\n", port)
 	fmt.Println("API Endpoints:")
 	fmt.Println("   - [GET]    /api/destinations (Pencarian, Filter, Sorting)")
@@ -45,7 +50,11 @@ func main() {
 	fmt.Println("   - [POST]   /api/destinations (Admin: Tambah Destinasi)")
 	fmt.Println("   - [PUT]    /api/destinations/{id} (Admin: Edit Destinasi)")
 	fmt.Println("   - [DELETE] /api/destinations/{id} (Admin: Hapus Destinasi)")
-	fmt.Println("==================================================")
+	fmt.Println("   - [GET]    /api/destinations/sequential-search (Pencarian Berurutan)")
+	fmt.Println("   - [GET]    /api/destinations/binary-search (Pencarian Biner)")
+	fmt.Println("   - [GET]    /api/destinations/selection-sort-cost (Urutkan Berdasarkan Biaya)")
+	fmt.Println("   - [GET]    /api/destinations/insertion-sort-distance (Urutkan Berdasarkan Jarak)")
+
 
 	// 5. Jalankan server
 	err = http.ListenAndServe(serverAddr, mux)

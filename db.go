@@ -52,7 +52,7 @@ func InitDB() error {
 	// 1. Periksa apakah file service account key Firebase ada
 	credentialPath := "serviceAccountKey.json"
 	if _, err := os.Stat(credentialPath); err == nil {
-		fmt.Println("🔥 Menghubungkan ke Firebase Firestore Cloud Database...")
+		fmt.Println("Menghubungkan ke Firebase Firestore Cloud Database...")
 		
 		opt := option.WithCredentialsFile(credentialPath)
 		app, err := firebase.NewApp(ctx, nil, opt)
@@ -67,7 +67,7 @@ func InitDB() error {
 
 		firestoreClient = client
 		isFirebaseMode = true
-		fmt.Println("🚀 SUKSES: NusantaraGo terhubung ke Cloud Firebase Firestore!")
+		fmt.Println("SUKSES: NusantaraGo terhubung ke Cloud Firebase Firestore!")
 		
 		// Lakukan seeding otomatis di cloud jika koleksi destinations masih kosong
 		err = seedFirestoreIfNeeded(ctx)
@@ -354,4 +354,162 @@ func DeleteDestination(id string) error {
 		}
 	}
 	return fmt.Errorf("destinasi dengan ID %s tidak ditemukan", id)
+}
+
+
+// SEQUENTIAL SEARCH
+// Mencari destinasi berdasarkan ID secara berurutan
+
+func SequentialSearchByID(targetID string) (Destination, bool) {
+
+	data := GetDestinations()
+
+	for _, dest := range data {
+		if dest.ID == targetID {
+			return dest, true
+		}
+	}
+
+	return Destination{}, false
+}
+
+
+// SELECTION SORT
+// Mengurutkan destinasi berdasarkan biaya tiket
+
+func SelectionSortByCost() []Destination {
+
+	data := GetDestinations()
+
+	n := len(data)
+
+	for i := 0; i < n-1; i++ {
+
+		minIdx := i
+
+		for j := i + 1; j < n; j++ {
+
+			if data[j].Cost < data[minIdx].Cost {
+				minIdx = j
+			}
+		}
+
+		data[i], data[minIdx] = data[minIdx], data[i]
+	}
+
+	return data
+}
+
+func SelectionSortCostSlice(data []Destination) {
+
+	n := len(data)
+
+	for i := 0; i < n-1; i++ {
+
+		minIdx := i
+
+		for j := i + 1; j < n; j++ {
+
+			if data[j].Cost < data[minIdx].Cost {
+				minIdx = j
+			}
+		}
+
+		data[i], data[minIdx] = data[minIdx], data[i]
+	}
+}
+
+// INSERTION SORT
+// Mengurutkan destinasi berdasarkan jarak
+func InsertionSortByDistance() []Destination {
+
+	data := GetDestinations()
+
+	for i := 1; i < len(data); i++ {
+
+		key := data[i]
+		j := i - 1
+
+		for j >= 0 && data[j].Distance > key.Distance {
+
+			data[j+1] = data[j]
+			j--
+		}
+
+		data[j+1] = key
+	}
+
+	return data
+}
+
+
+// INSERTION SORT BERDASARKAN ID
+// Digunakan untuk Binary Search
+func InsertionSortByID() []Destination {
+
+	data := GetDestinations()
+
+	for i := 1; i < len(data); i++ {
+
+		key := data[i]
+		j := i - 1
+
+		for j >= 0 && data[j].ID > key.ID {
+
+			data[j+1] = data[j]
+			j--
+		}
+
+		data[j+1] = key
+	}
+
+	return data
+}
+
+// BINARY SEARCH
+func BinarySearchByID(targetID string) (Destination, bool) {
+
+	data := InsertionSortByID()
+
+	low := 0
+	high := len(data) - 1
+
+	for low <= high {
+
+		mid := (low + high) / 2
+
+		if data[mid].ID == targetID {
+			return data[mid], true
+		}
+
+		if data[mid].ID < targetID {
+			low = mid + 1
+		} else {
+			high = mid - 1
+		}
+	}
+
+	return Destination{}, false
+}
+
+// Mengurutkan dari jarak terdekat ke terjauh
+func InsertionSortDistanceSlice(data []Destination) {
+
+	for i := 1; i < len(data); i++ {
+
+		// Simpan data yang akan disisipkan
+		key := data[i]
+
+		j := i - 1
+
+		// Geser elemen yang lebih besar
+		for j >= 0 && data[j].Distance > key.Distance {
+
+			data[j+1] = data[j]
+			j--
+		}
+
+		// Sisipkan ke posisi yang tepat
+		data[j+1] = key
+	}
 }

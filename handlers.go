@@ -241,3 +241,88 @@ func deleteDestinationHandler(w http.ResponseWriter, r *http.Request) {
 
 	sendJSON(w, http.StatusOK, map[string]string{"message": "Destination deleted successfully", "id": id})
 }
+
+func sequentialSearchHandler(w http.ResponseWriter, r *http.Request) {
+
+	if enableCORS(w, r) {
+		return
+	}
+
+	id := r.URL.Query().Get("id")
+
+	if id == "" {
+		sendJSON(w, http.StatusBadRequest,
+			map[string]string{
+				"error": "id is required",
+			})
+		return
+	}
+
+	dest, found := SequentialSearchByID(id)
+
+	if !found {
+		sendJSON(w, http.StatusNotFound,
+			map[string]string{
+				"error": "destination not found",
+			})
+		return
+	}
+
+	sendJSON(w, http.StatusOK, dest)
+}
+
+func binarySearchHandler(w http.ResponseWriter, r *http.Request) {
+
+	if enableCORS(w, r) {
+		return
+	}
+
+	id := r.URL.Query().Get("id")
+
+	if id == "" {
+		sendJSON(w, http.StatusBadRequest,
+			map[string]string{
+				"error": "id is required",
+			})
+		return
+	}
+
+	dest, found := BinarySearchByID(id)
+
+	if !found {
+		sendJSON(w, http.StatusNotFound,
+			map[string]string{
+				"error": "destination not found",
+			})
+		return
+	}
+
+	sendJSON(w, http.StatusOK, dest)
+}
+
+
+func selectionSortCostHandler(w http.ResponseWriter, r *http.Request) {
+
+	if enableCORS(w, r) {
+		return
+	}
+
+	data := GetDestinations()
+
+	SelectionSortCostSlice(data)
+
+	sendJSON(w, http.StatusOK, data)
+}
+
+func insertionSortDistanceHandler(w http.ResponseWriter, r *http.Request) {
+
+	if enableCORS(w, r) {
+		return
+	}
+
+	data := GetDestinations()
+
+	InsertionSortDistanceSlice(data)
+
+	sendJSON(w, http.StatusOK, data)
+}
