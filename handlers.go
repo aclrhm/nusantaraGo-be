@@ -6,6 +6,7 @@ import (
 	"math/rand"
 	"net/http"
 	"time"
+	"strings"
 )
 
 // enableCORS adalah helper untuk menambahkan header CORS ke respon
@@ -156,6 +157,45 @@ func deleteDestinationHandler(w http.ResponseWriter, r *http.Request) {
 	sendJSON(w, http.StatusOK, map[string]string{"message": "Destination deleted successfully", "id": id})
 }
 
+func binarySearchHandler(w http.ResponseWriter, r *http.Request) {
+	if enableCORS(w, r) {
+		return
+	}
+
+	id       := r.URL.Query().Get("id")
+	category := strings.ToLower(strings.TrimSpace(r.URL.Query().Get("category")))
+
+	// Binary Search by ID
+	if id != "" {
+		dest, found := BinarySearchById(id)
+		if !found {
+			sendJSON(w, http.StatusNotFound, map[string]string{"error": "destination not found"})
+			return
+		}
+		sendJSON(w, http.StatusOK, []Destination{dest})
+		return
+	}
+
+	// Filter by category (pakai sequential karena perlu semua yang match, bukan satu)
+	if category != "" {
+		if category == "semua" {
+			sendJSON(w, http.StatusOK, GetDestinations())
+			return
+		}
+		all := GetDestinations()
+		results := []Destination{}
+		for _, d := range all {
+			if strings.ToLower(d.Category) == category {
+				results = append(results, d)
+			}
+		}
+		sendJSON(w, http.StatusOK, results)
+		return
+	}
+
+	sendJSON(w, http.StatusBadRequest, map[string]string{"error": "parameter 'id' atau 'category' diperlukan"})
+}
+
 // sequentialSearchHandler menangani pencarian berurutan (Sequential Search)
 // Mendukung pencarian berdasarkan ID (?id=) atau kata kunci multi-kolom (?q=)
 func sequentialSearchHandler(w http.ResponseWriter, r *http.Request) {
@@ -195,34 +235,34 @@ func sequentialSearchHandler(w http.ResponseWriter, r *http.Request) {
 
 // binarySearchHandler menangani pencarian biner (Binary Search)
 // Data diurutkan dulu berdasarkan ID menggunakan Insertion Sort
-func binarySearchHandler(w http.ResponseWriter, r *http.Request) {
+// func binarySearchHandler(w http.ResponseWriter, r *http.Request) {
 
-	if enableCORS(w, r) {
-		return
-	}
+// 	if enableCORS(w, r) {
+// 		return
+// 	}
 
-	id := r.URL.Query().Get("id")
+// 	id := r.URL.Query().Get("id")
 
-	if id == "" {
-		sendJSON(w, http.StatusBadRequest,
-			map[string]string{
-				"error": "id is required",
-			})
-		return
-	}
+// 	if id == "" {
+// 		sendJSON(w, http.StatusBadRequest,
+// 			map[string]string{
+// 				"error": "id is required",
+// 			})
+// 		return
+// 	}
 
-	dest, found := BinarySearchById(id)
+// 	dest, found := BinarySearchById(id)
 
-	if !found {
-		sendJSON(w, http.StatusNotFound,
-			map[string]string{
-				"error": "destination not found",
-			})
-		return
-	}
+// 	if !found {
+// 		sendJSON(w, http.StatusNotFound,
+// 			map[string]string{
+// 				"error": "destination not found",
+// 			})
+// 		return
+// 	}
 
-	sendJSON(w, http.StatusOK, []Destination{dest})
-}
+// 	sendJSON(w, http.StatusOK, []Destination{dest})
+// }
 
 // selectionSortCostHandler menangani pengurutan berdasarkan biaya (Selection Sort)
 // Mendukung parameter ?order=asc (default) atau ?order=desc

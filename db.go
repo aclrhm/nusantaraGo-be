@@ -358,6 +358,7 @@ func DeleteDestination(id string) error {
 }
 
 
+
 // SEQUENTIAL SEARCH
 func SequentialSearchByID(targetID string) (Destination, bool) {
 
