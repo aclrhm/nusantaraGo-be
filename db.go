@@ -133,7 +133,6 @@ func initLocalJSONDB() error {
 		return fmt.Errorf("gagal membaca database file lokal: %w", err)
 	}
 
-	// We use a temporary slice just for JSON unmarshaling to keep compatibility with the file format
 	var temp []Destination
 	err = json.Unmarshal(fileData, &temp)
 	if err != nil {
@@ -158,7 +157,6 @@ func initLocalJSONDB() error {
 }
 
 func saveToFileLocked() error {
-	// We use a temporary slice just for JSON marshaling to keep compatibility with the file format
 	temp := make([]Destination, destinationsCount)
 	for i := 0; i < destinationsCount; i++ {
 		temp[i] = destinations[i]
