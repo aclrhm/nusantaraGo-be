@@ -546,12 +546,12 @@ func InsertionSortDistanceSlice(data []Destination, order string) {
 
 	for i := 1; i < len(data); i++ {
 
-		// Simpan data yang akan disisipkan
+		
 		key := data[i]
 
 		j := i - 1
 
-		// Geser elemen sesuai urutan
+
 		if order == "desc" {
 			for j >= 0 && data[j].Distance < key.Distance {
 				data[j+1] = data[j]
@@ -564,12 +564,11 @@ func InsertionSortDistanceSlice(data []Destination, order string) {
 			}
 		}
 
-		// Sisipkan ke posisi yang tepat
 		data[j+1] = key
 	}
 }
 
-// InsertionSortFacilitiesSlice mengurutkan destinasi berdasarkan jumlah fasilitas (in-place)
+// InsertionSortFacilitiesSlice mengurutkan destinasi berdasarkan jumlah fasilitas 
 // order: "desc" = terlengkap dulu, "asc" = tersedikit dulu
 func InsertionSortFacilitiesSlice(data []Destination, order string) {
 

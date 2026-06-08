@@ -73,7 +73,7 @@ func createDestinationHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Generate ID acak unik jika tidak dikirim dari frontend
+	// Generate ID 
 	if d.ID == "" {
 		rand.Seed(time.Now().UnixNano())
 		d.ID = fmt.Sprintf("dest-%d", rand.Intn(1000000))
@@ -106,7 +106,7 @@ func updateDestinationHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Cek apakah data ada
+	
 	_, found := GetDestinationByID(id)
 	if !found {
 		sendJSON(w, http.StatusNotFound, map[string]string{"error": "Destination not found"})
@@ -141,7 +141,6 @@ func deleteDestinationHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Cek apakah data ada
 	_, found := GetDestinationByID(id)
 	if !found {
 		sendJSON(w, http.StatusNotFound, map[string]string{"error": "Destination not found"})
@@ -157,6 +156,8 @@ func deleteDestinationHandler(w http.ResponseWriter, r *http.Request) {
 	sendJSON(w, http.StatusOK, map[string]string{"message": "Destination deleted successfully", "id": id})
 }
 
+// sequentialSearchHandler menangani pencarian berurutan (Sequential Search)
+// Mendukung pencarian berdasarkan ID (?id=) atau kata kunci multi-kolom (?q=)
 func sequentialSearchHandler(w http.ResponseWriter, r *http.Request) {
 
 	if enableCORS(w, r) {
@@ -164,28 +165,36 @@ func sequentialSearchHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	id := r.URL.Query().Get("id")
+	keyword := r.URL.Query().Get("q")
 
-	if id == "" {
-		sendJSON(w, http.StatusBadRequest,
-			map[string]string{
-				"error": "id is required",
-			})
+	if id != "" {
+		dest, found := SequentialSearchByID(id)
+		if !found {
+			sendJSON(w, http.StatusNotFound,
+				map[string]string{
+					"error": "destination not found",
+				})
+			return
+		}
+		
+		sendJSON(w, http.StatusOK, []Destination{dest})
 		return
 	}
 
-	dest, found := SequentialSearchByID(id)
-
-	if !found {
-		sendJSON(w, http.StatusNotFound,
-			map[string]string{
-				"error": "destination not found",
-			})
+	if keyword != "" {
+		results := SequentialSearchByKeyword(keyword)
+		sendJSON(w, http.StatusOK, results)
 		return
 	}
 
-	sendJSON(w, http.StatusOK, dest)
+	sendJSON(w, http.StatusBadRequest,
+		map[string]string{
+			"error": "parameter 'id' atau 'q' (keyword) diperlukan",
+		})
 }
 
+// binarySearchHandler menangani pencarian biner (Binary Search)
+// Data diurutkan dulu berdasarkan ID menggunakan Insertion Sort
 func binarySearchHandler(w http.ResponseWriter, r *http.Request) {
 
 	if enableCORS(w, r) {
@@ -212,32 +221,62 @@ func binarySearchHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	sendJSON(w, http.StatusOK, dest)
+	sendJSON(w, http.StatusOK, []Destination{dest})
 }
 
-
+// selectionSortCostHandler menangani pengurutan berdasarkan biaya (Selection Sort)
+// Mendukung parameter ?order=asc (default) atau ?order=desc
 func selectionSortCostHandler(w http.ResponseWriter, r *http.Request) {
 
 	if enableCORS(w, r) {
 		return
 	}
 
-	data := GetDestinations()
+	order := r.URL.Query().Get("order")
+	if order == "" {
+		order = "asc"
+	}
 
-	SelectionSortCostSlice(data, "asc")
+	data := GetDestinations()
+	SelectionSortCostSlice(data, order)
 
 	sendJSON(w, http.StatusOK, data)
 }
 
+// insertionSortDistanceHandler menangani pengurutan berdasarkan jarak (Insertion Sort)
+// Mendukung parameter ?order=asc (default) atau ?order=desc
 func insertionSortDistanceHandler(w http.ResponseWriter, r *http.Request) {
 
 	if enableCORS(w, r) {
 		return
 	}
 
-	data := GetDestinations()
+	order := r.URL.Query().Get("order")
+	if order == "" {
+		order = "asc"
+	}
 
-	InsertionSortDistanceSlice(data, "asc")
+	data := GetDestinations()
+	InsertionSortDistanceSlice(data, order)
+
+	sendJSON(w, http.StatusOK, data)
+}
+
+// insertionSortFacilitiesHandler menangani pengurutan berdasarkan jumlah fasilitas (Insertion Sort)
+// Mendukung parameter ?order=desc (default) atau ?order=asc
+func insertionSortFacilitiesHandler(w http.ResponseWriter, r *http.Request) {
+
+	if enableCORS(w, r) {
+		return
+	}
+
+	order := r.URL.Query().Get("order")
+	if order == "" {
+		order = "desc"
+	}
+
+	data := GetDestinations()
+	InsertionSortFacilitiesSlice(data, order)
 
 	sendJSON(w, http.StatusOK, data)
 }
