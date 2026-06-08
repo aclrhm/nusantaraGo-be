@@ -165,7 +165,6 @@ func binarySearchHandler(w http.ResponseWriter, r *http.Request) {
 	id       := r.URL.Query().Get("id")
 	category := strings.ToLower(strings.TrimSpace(r.URL.Query().Get("category")))
 
-	// Binary Search by ID
 	if id != "" {
 		dest, found := BinarySearchById(id)
 		if !found {
@@ -176,7 +175,6 @@ func binarySearchHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Filter by category (pakai sequential karena perlu semua yang match, bukan satu)
 	if category != "" {
 		if category == "semua" {
 			sendJSON(w, http.StatusOK, GetDestinations())

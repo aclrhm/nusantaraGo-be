@@ -212,35 +212,9 @@ func getSeedData() []Destination {
 // GetDestinations membaca semua destinasi
 func GetDestinations() []Destination {
 	if isFirebaseMode {
-		ctx, cancel := context.WithTimeout(context.Background(), ctxTimeout)
-		defer cancel()
-
-		var results []Destination
-		iter := firestoreClient.Collection("destinations").Documents(ctx)
-		defer iter.Stop()
-
-		for {
-			doc, err := iter.Next()
-			if err == iterator.Done {
-				break
-			}
-			if err != nil {
-				fmt.Printf("Gagal membaca dokumen Firestore: %v\n", err)
-				break
-			}
-			
-			var dest Destination
-			err = doc.DataTo(&dest)
-			if err != nil {
-				fmt.Printf("Gagal mengurai dokumen Firestore: %v\n", err)
-				continue
-			}
-			results = append(results, dest)
-		}
-		return results
+		return getDestinationsFromFirestore()
 	}
 
-	// Local JSON fallback
 	dbMutex.RLock()
 	defer dbMutex.RUnlock()
 	dst := make([]Destination, len(destinations))
@@ -248,6 +222,34 @@ func GetDestinations() []Destination {
 	return dst
 }
 
+func getDestinationsFromFirestore() []Destination {
+	ctx, cancel := context.WithTimeout(context.Background(), ctxTimeout)
+	defer cancel()
+
+	var results []Destination
+	iter := firestoreClient.Collection("destinations").Documents(ctx)
+	defer iter.Stop()
+
+	done := false
+	for !done {
+		doc, err := iter.Next()
+		if err == iterator.Done {
+			done = true
+		} else if err != nil {
+			fmt.Printf("Gagal membaca dokumen Firestore: %v\n", err)
+			done = true
+		} else {
+			var dest Destination
+			if err := doc.DataTo(&dest); err != nil {
+				fmt.Printf("Gagal mengurai dokumen Firestore: %v\n", err)
+			} else {
+				results = append(results, dest)
+			}
+		}
+	}
+
+	return results
+}
 // GetDestinationByID mencari destinasi berdasarkan ID
 func GetDestinationByID(id string) (Destination, bool) {
 	if isFirebaseMode {
@@ -375,46 +377,30 @@ func SequentialSearchByID(targetID string) (Destination, bool) {
 
 // SEQUENTIAL SEARCH KEYWORD
 func SequentialSearchByKeyword(query string) []Destination {
-
 	data := GetDestinations()
 	results := []Destination{}
 	lowerQuery := strings.ToLower(strings.TrimSpace(query))
 
 	for _, dest := range data {
-		matched := false
+		matchName := strings.Contains(strings.ToLower(dest.Name), lowerQuery)
+		matchDesc := strings.Contains(strings.ToLower(dest.Description), lowerQuery)
+		matchLoc  := strings.Contains(strings.ToLower(dest.Location), lowerQuery)
 
-		// Cek nama
-		if strings.Contains(strings.ToLower(dest.Name), lowerQuery) {
-			matched = true
-		}
-		// Cek deskripsi
-		if !matched && strings.Contains(strings.ToLower(dest.Description), lowerQuery) {
-			matched = true
-		}
-		// Cek lokasi
-		if !matched && strings.Contains(strings.ToLower(dest.Location), lowerQuery) {
-			matched = true
-		}
-		// Cek fasilitas
-		if !matched {
-			for _, fac := range dest.Facilities {
-				if strings.Contains(strings.ToLower(fac), lowerQuery) {
-					matched = true
-					break
-				}
-			}
-		}
-		// Cek wahana
-		if !matched {
-			for _, ride := range dest.Rides {
-				if strings.Contains(strings.ToLower(ride), lowerQuery) {
-					matched = true
-					break
-				}
+		matchFac := false
+		for _, fac := range dest.Facilities {
+			if strings.Contains(strings.ToLower(fac), lowerQuery) {
+				matchFac = true
 			}
 		}
 
-		if matched {
+		matchRide := false
+		for _, ride := range dest.Rides {
+			if strings.Contains(strings.ToLower(ride), lowerQuery) {
+				matchRide = true
+			}
+		}
+
+		if matchName || matchDesc || matchLoc || matchFac || matchRide {
 			results = append(results, dest)
 		}
 	}
