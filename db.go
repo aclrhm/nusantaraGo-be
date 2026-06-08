@@ -19,7 +19,7 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-// Destination merepresentasikan data tempat pariwisata
+// struct
 type Destination struct {
 	ID          string   `json:"id" firestore:"id"`
 	Name        string   `json:"name" firestore:"name"`
@@ -36,7 +36,7 @@ type Destination struct {
 const MAX_DATA = 100
 
 var (
-	// Local JSON Database Variables
+	// array statis untuk mode JSON lokal
 	destinations      [MAX_DATA]Destination
 	destinationsCount int
 	dbMutex           sync.RWMutex
@@ -113,7 +113,7 @@ func seedFirestoreIfNeeded(ctx context.Context) error {
 	return nil
 }
 
-// initLocalJSONDB menginisialisasi database file JSON offline
+// array statis
 func initLocalJSONDB() error {
 	dbMutex.Lock()
 	defer dbMutex.Unlock()
