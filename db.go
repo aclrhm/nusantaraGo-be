@@ -33,11 +33,14 @@ type Destination struct {
 	ImageURL    string   `json:"imageUrl" firestore:"imageUrl"`
 }
 
+const MAX_DATA = 100
+
 var (
 	// Local JSON Database Variables
-	destinations []Destination
-	dbMutex      sync.RWMutex
-	dbFilePath   = "destinations.json"
+	destinations      [MAX_DATA]Destination
+	destinationsCount int
+	dbMutex           sync.RWMutex
+	dbFilePath        = "destinations.json"
 
 	// Firebase Firestore Variables
 	firestoreClient *firestore.Client
@@ -97,14 +100,15 @@ func seedFirestoreIfNeeded(ctx context.Context) error {
 	if err == iterator.Done {
 		// Koleksi kosong, lakukan seeding
 		fmt.Println("Koleksi Firestore kosong. Melakukan seeding data awal ke cloud...")
-		seedData := getSeedData()
-		for _, dest := range seedData {
+		seedData, count := getSeedData()
+		for i := 0; i < count; i++ {
+			dest := seedData[i]
 			_, err := firestoreClient.Collection("destinations").Doc(dest.ID).Set(ctx, dest)
 			if err != nil {
 				return fmt.Errorf("gagal menyemai destinasi %s: %w", dest.ID, err)
 			}
 		}
-		fmt.Printf("Sukses mengunggah %d data awal pariwisata ke Firebase Firestore!\n", len(seedData))
+		fmt.Printf("Sukses mengunggah %d data awal pariwisata ke Firebase Firestore!\n", count)
 	}
 	return nil
 }
@@ -116,7 +120,11 @@ func initLocalJSONDB() error {
 
 	if _, err := os.Stat(dbFilePath); errors.Is(err, os.ErrNotExist) {
 		fmt.Println("Membuat file database JSON lokal awal...")
-		destinations = getSeedData()
+		seedData, count := getSeedData()
+		for i := 0; i < count; i++ {
+			destinations[i] = seedData[i]
+		}
+		destinationsCount = count
 		return saveToFileLocked()
 	}
 
@@ -125,18 +133,37 @@ func initLocalJSONDB() error {
 		return fmt.Errorf("gagal membaca database file lokal: %w", err)
 	}
 
-	err = json.Unmarshal(fileData, &destinations)
+	// We use a temporary slice just for JSON unmarshaling to keep compatibility with the file format
+	var temp []Destination
+	err = json.Unmarshal(fileData, &temp)
 	if err != nil {
 		fmt.Println("File database lokal rusak, melakukan seeding ulang...")
-		destinations = getSeedData()
+		seedData, count := getSeedData()
+		for i := 0; i < count; i++ {
+			destinations[i] = seedData[i]
+		}
+		destinationsCount = count
 		return saveToFileLocked()
+	}
+
+	destinationsCount = len(temp)
+	if destinationsCount > MAX_DATA {
+		destinationsCount = MAX_DATA
+	}
+	for i := 0; i < destinationsCount; i++ {
+		destinations[i] = temp[i]
 	}
 
 	return nil
 }
 
 func saveToFileLocked() error {
-	dataBytes, err := json.MarshalIndent(destinations, "", "  ")
+	// We use a temporary slice just for JSON marshaling to keep compatibility with the file format
+	temp := make([]Destination, destinationsCount)
+	for i := 0; i < destinationsCount; i++ {
+		temp[i] = destinations[i]
+	}
+	dataBytes, err := json.MarshalIndent(temp, "", "  ")
 	if err != nil {
 		return err
 	}
@@ -144,89 +171,88 @@ func saveToFileLocked() error {
 }
 
 // getSeedData menyediakan data pariwisata inisial Indonesia
-func getSeedData() []Destination {
-	return []Destination{
-		{
-			ID:          "dest-1",
-			Name:        "Candi Borobudur",
-			Category:    "Budaya",
-			Cost:        50000,
-			Distance:    40.2,
-			Location:    "Magelang, Jawa Tengah",
-			Description: "Candi Buddha terbesar di dunia yang megah, diakui sebagai warisan budaya dunia oleh UNESCO. Menyajikan pemandangan matahari terbit yang sangat memukau di atas stupa kuno.",
-			Facilities:  []string{"Area Parkir Luas", "Toilet Bersih", "Mushola", "Pemandu Wisata", "Toko Souvenir", "Pusat Informasi"},
-			Rides:       []string{"Museum Borobudur", "Kereta Wisata Keliling", "Sewa Sepeda"},
-			ImageURL:    "https://images.unsplash.com/photo-1584810359583-96fc3448beaa?auto=format&fit=crop&w=800&q=80",
-		},
-		{
-			ID:          "dest-2",
-			Name:        "Pantai Kuta Bali",
-			Category:    "Alam",
-			Cost:        15000,
-			Distance:    12.5,
-			Location:    "Badung, Bali",
-			Description: "Pantai pasir putih legendaris yang terkenal di seluruh dunia. Merupakan pusat selancar, bersantai menikmati matahari terbenam yang romantis, dan memiliki garis pantai yang sangat panjang.",
-			Facilities:  []string{"Shower Umum", "Penyewaan Payung Pantai", "Toilet", "Life Guard", "Area Parkir"},
-			Rides:       []string{"Pusat Surfing (Selancar)", "Banana Boat", "Sewa Jet Ski"},
-			ImageURL:    "https://images.unsplash.com/photo-1537996194471-e657df975ab4?auto=format&fit=crop&w=800&q=80",
-		},
-		{
-			ID:          "dest-3",
-			Name:        "Gunung Bromo",
-			Category:    "Petualangan",
-			Cost:        35000,
-			Distance:    110.0,
-			Location:    "Probolinggo, Jawa Timur",
-			Description: "Gunung berapi aktif yang menawarkan pemandangan magis lautan pasir luas, kawah aktif yang menakjubkan, dan spot sunrise legendaris dari puncak Penanjakan.",
-			Facilities:  []string{"Toilet Umum", "Mushola Penanjakan", "Warung Kopi", "Penyewaan Jaket Hangat", "Area Parkir Jeep"},
-			Rides:       []string{"Wisata Jeep 4x4", "Berkuda di Pasir Berbisik", "Pendakian Kawah Bromo"},
-			ImageURL:    "https://images.unsplash.com/photo-1602002418082-a4443e081dd1?auto=format&fit=crop&w=800&q=80",
-		},
-		{
-			ID:          "dest-4",
-			Name:        "Dunia Fantasi (Dufan)",
-			Category:    "Rekreasi",
-			Cost:        250000,
-			Distance:    8.0,
-			Location:    "Jakarta Utara, DKI Jakarta",
-			Description: "Taman hiburan terbesar dan terlengkap di Indonesia yang terletak di kompleks Ancol. Menawarkan puluhan wahana memacu adrenalin dan rekreasi keluarga yang seru.",
-			Facilities:  []string{"Ruang P3K", "Toilet AC & Ramah Anak", "Mushola Besar", "Food Court", "Ruang Menyusui", "Loker Penitipan Barang"},
-			Rides:       []string{"Halilintar (Roller Coaster)", "Kora-Kora", "Bianglala Raksasa", "Istana Boneka"},
-			ImageURL:    "https://images.unsplash.com/photo-1513885045260-6b15d6604b7a?auto=format&fit=crop&w=800&q=80",
-		},
-		{
-			ID:          "dest-5",
-			Name:        "Taman Wisata Alam Raja Ampat",
-			Category:    "Alam",
-			Cost:        500000,
-			Distance:    32.0,
-			Location:    "Raja Ampat, Papua Barat",
-			Description: "Surga bawah laut terindah di dunia dengan keanekaragaman terumbu karang tertinggi. Menawarkan pemandangan gugusan pulau karang eksotis yang memanjakan mata.",
-			Facilities:  []string{"Pusat Diving & Snorkeling", "Homestay Terapung", "Pemandu Lokal Berlisensi", "Kapal Speedboat"},
-			Rides:       []string{"Diving (Menyelam)", "Snorkeling Bersama Penyu", "Island Hopping (Jelajah Pulau)"},
-			ImageURL:    "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=800&q=80",
-		},
+func getSeedData() ([MAX_DATA]Destination, int) {
+	var data [MAX_DATA]Destination
+	data[0] = Destination{
+		ID:          "dest-1",
+		Name:        "Candi Borobudur",
+		Category:    "Budaya",
+		Cost:        50000,
+		Distance:    40.2,
+		Location:    "Magelang, Jawa Tengah",
+		Description: "Candi Buddha terbesar di dunia yang megah, diakui sebagai warisan budaya dunia oleh UNESCO. Menyajikan pemandangan matahari terbit yang sangat memukau di atas stupa kuno.",
+		Facilities:  []string{"Area Parkir Luas", "Toilet Bersih", "Mushola", "Pemandu Wisata", "Toko Souvenir", "Pusat Informasi"},
+		Rides:       []string{"Museum Borobudur", "Kereta Wisata Keliling", "Sewa Sepeda"},
+		ImageURL:    "https://images.unsplash.com/photo-1584810359583-96fc3448beaa?auto=format&fit=crop&w=800&q=80",
 	}
+	data[1] = Destination{
+		ID:          "dest-2",
+		Name:        "Pantai Kuta Bali",
+		Category:    "Alam",
+		Cost:        15000,
+		Distance:    12.5,
+		Location:    "Badung, Bali",
+		Description: "Pantai pasir putih legendaris yang terkenal di seluruh dunia. Merupakan pusat selancar, bersantai menikmati matahari terbenam yang romantis, dan memiliki garis pantai yang sangat panjang.",
+		Facilities:  []string{"Shower Umum", "Penyewaan Payung Pantai", "Toilet", "Life Guard", "Area Parkir"},
+		Rides:       []string{"Pusat Surfing (Selancar)", "Banana Boat", "Sewa Jet Ski"},
+		ImageURL:    "https://images.unsplash.com/photo-1537996194471-e657df975ab4?auto=format&fit=crop&w=800&q=80",
+	}
+	data[2] = Destination{
+		ID:          "dest-3",
+		Name:        "Gunung Bromo",
+		Category:    "Petualangan",
+		Cost:        35000,
+		Distance:    110.0,
+		Location:    "Probolinggo, Jawa Timur",
+		Description: "Gunung berapi aktif yang menawarkan pemandangan magis lautan pasir luas, kawah aktif yang menakjubkan, dan spot sunrise legendaris dari puncak Penanjakan.",
+		Facilities:  []string{"Toilet Umum", "Mushola Penanjakan", "Warung Kopi", "Penyewaan Jaket Hangat", "Area Parkir Jeep"},
+		Rides:       []string{"Wisata Jeep 4x4", "Berkuda di Pasir Berbisik", "Pendakian Kawah Bromo"},
+		ImageURL:    "https://images.unsplash.com/photo-1602002418082-a4443e081dd1?auto=format&fit=crop&w=800&q=80",
+	}
+	data[3] = Destination{
+		ID:          "dest-4",
+		Name:        "Dunia Fantasi (Dufan)",
+		Category:    "Rekreasi",
+		Cost:        250000,
+		Distance:    8.0,
+		Location:    "Jakarta Utara, DKI Jakarta",
+		Description: "Taman hiburan terbesar dan terlengkap di Indonesia yang terletak di kompleks Ancol. Menawarkan puluhan wahana memacu adrenalin dan rekreasi keluarga yang seru.",
+		Facilities:  []string{"Ruang P3K", "Toilet AC & Ramah Anak", "Mushola Besar", "Food Court", "Ruang Menyusui", "Loker Penitipan Barang"},
+		Rides:       []string{"Halilintar (Roller Coaster)", "Kora-Kora", "Bianglala Raksasa", "Istana Boneka"},
+		ImageURL:    "https://images.unsplash.com/photo-1513885045260-6b15d6604b7a?auto=format&fit=crop&w=800&q=80",
+	}
+	data[4] = Destination{
+		ID:          "dest-5",
+		Name:        "Taman Wisata Alam Raja Ampat",
+		Category:    "Alam",
+		Cost:        500000,
+		Distance:    32.0,
+		Location:    "Raja Ampat, Papua Barat",
+		Description: "Surga bawah laut terindah di dunia dengan keanekaragaman terumbu karang tertinggi. Menawarkan pemandangan gugusan pulau karang eksotis yang memanjakan mata.",
+		Facilities:  []string{"Pusat Diving & Snorkeling", "Homestay Terapung", "Pemandu Lokal Berlisensi", "Kapal Speedboat"},
+		Rides:       []string{"Diving (Menyelam)", "Snorkeling Bersama Penyu", "Island Hopping (Jelajah Pulau)"},
+		ImageURL:    "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=800&q=80",
+	}
+	return data, 5
 }
 
 // GetDestinations membaca semua destinasi
-func GetDestinations() []Destination {
+func GetDestinations() ([MAX_DATA]Destination, int) {
 	if isFirebaseMode {
 		return getDestinationsFromFirestore()
 	}
 
 	dbMutex.RLock()
 	defer dbMutex.RUnlock()
-	dst := make([]Destination, len(destinations))
-	copy(dst, destinations)
-	return dst
+	return destinations, destinationsCount
 }
 
-func getDestinationsFromFirestore() []Destination {
+func getDestinationsFromFirestore() ([MAX_DATA]Destination, int) {
 	ctx, cancel := context.WithTimeout(context.Background(), ctxTimeout)
 	defer cancel()
 
-	var results []Destination
+	var results [MAX_DATA]Destination
+	var count int
 	iter := firestoreClient.Collection("destinations").Documents(ctx)
 	defer iter.Stop()
 
@@ -243,12 +269,15 @@ func getDestinationsFromFirestore() []Destination {
 			if err := doc.DataTo(&dest); err != nil {
 				fmt.Printf("Gagal mengurai dokumen Firestore: %v\n", err)
 			} else {
-				results = append(results, dest)
+				if count < MAX_DATA {
+					results[count] = dest
+					count++
+				}
 			}
 		}
 	}
 
-	return results
+	return results, count
 }
 // GetDestinationByID mencari destinasi berdasarkan ID
 func GetDestinationByID(id string) (Destination, bool) {
@@ -276,9 +305,9 @@ func GetDestinationByID(id string) (Destination, bool) {
 	// Local JSON fallback
 	dbMutex.RLock()
 	defer dbMutex.RUnlock()
-	for _, d := range destinations {
-		if d.ID == id {
-			return d, true
+	for i := 0; i < destinationsCount; i++ {
+		if destinations[i].ID == id {
+			return destinations[i], true
 		}
 	}
 	return Destination{}, false
@@ -303,7 +332,11 @@ func CreateDestination(d Destination) error {
 	if d.Name == "" || d.Category == "" {
 		return errors.New("name and category cannot be empty")
 	}
-	destinations = append(destinations, d)
+	if destinationsCount >= MAX_DATA {
+		return errors.New("database penuh")
+	}
+	destinations[destinationsCount] = d
+	destinationsCount++
 	return saveToFileLocked()
 }
 
@@ -324,8 +357,8 @@ func UpdateDestination(id string, updated Destination) error {
 	// Local JSON fallback
 	dbMutex.Lock()
 	defer dbMutex.Unlock()
-	for i, d := range destinations {
-		if d.ID == id {
+	for i := 0; i < destinationsCount; i++ {
+		if destinations[i].ID == id {
 			updated.ID = id
 			destinations[i] = updated
 			return saveToFileLocked()
@@ -350,9 +383,12 @@ func DeleteDestination(id string) error {
 	// Local JSON fallback
 	dbMutex.Lock()
 	defer dbMutex.Unlock()
-	for i, d := range destinations {
-		if d.ID == id {
-			destinations = append(destinations[:i], destinations[i+1:]...)
+	for i := 0; i < destinationsCount; i++ {
+		if destinations[i].ID == id {
+			for j := i; j < destinationsCount-1; j++ {
+				destinations[j] = destinations[j+1]
+			}
+			destinationsCount--
 			return saveToFileLocked()
 		}
 	}
@@ -364,11 +400,11 @@ func DeleteDestination(id string) error {
 // SEQUENTIAL SEARCH
 func SequentialSearchByID(targetID string) (Destination, bool) {
 
-	data := GetDestinations()
+	data, count := GetDestinations()
 
-	for _, dest := range data {
-		if dest.ID == targetID {
-			return dest, true
+	for i := 0; i < count; i++ {
+		if data[i].ID == targetID {
+			return data[i], true
 		}
 	}
 
@@ -376,12 +412,14 @@ func SequentialSearchByID(targetID string) (Destination, bool) {
 }
 
 // SEQUENTIAL SEARCH KEYWORD
-func SequentialSearchByKeyword(query string) []Destination {
-	data := GetDestinations()
-	results := []Destination{}
+func SequentialSearchByKeyword(query string) ([MAX_DATA]Destination, int) {
+	data, count := GetDestinations()
+	var results [MAX_DATA]Destination
+	var resCount int
 	lowerQuery := strings.ToLower(strings.TrimSpace(query))
 
-	for _, dest := range data {
+	for i := 0; i < count; i++ {
+		dest := data[i]
 		matchName := strings.Contains(strings.ToLower(dest.Name), lowerQuery)
 		matchDesc := strings.Contains(strings.ToLower(dest.Description), lowerQuery)
 		matchLoc  := strings.Contains(strings.ToLower(dest.Location), lowerQuery)
@@ -401,26 +439,27 @@ func SequentialSearchByKeyword(query string) []Destination {
 		}
 
 		if matchName || matchDesc || matchLoc || matchFac || matchRide {
-			results = append(results, dest)
+			if resCount < MAX_DATA {
+				results[resCount] = dest
+				resCount++
+			}
 		}
 	}
 
-	return results
+	return results, resCount
 }
 
 // SELECTION SORT
 // Mengurutkan destinasi berdasarkan biaya tiket
-func SelectionSortByCost() []Destination {
+func SelectionSortByCost() ([MAX_DATA]Destination, int) {
 
-	data := GetDestinations()
+	data, count := GetDestinations()
 
-	n := len(data)
-
-	for i := 0; i < n-1; i++ {
+	for i := 0; i < count-1; i++ {
 
 		minIdx := i
 
-		for j := i + 1; j < n; j++ {
+		for j := i + 1; j < count; j++ {
 
 			if data[j].Cost < data[minIdx].Cost {
 				minIdx = j
@@ -430,19 +469,17 @@ func SelectionSortByCost() []Destination {
 		data[i], data[minIdx] = data[minIdx], data[i]
 	}
 
-	return data
+	return data, count
 }
 
 // SelectionSortCostSlice mengurutkan destinasi berdasarkan biaya (in-place)
-func SelectionSortCostSlice(data []Destination, order string) {
+func SelectionSortCostSlice(data *[MAX_DATA]Destination, count int, order string) {
 
-	n := len(data)
-
-	for i := 0; i < n-1; i++ {
+	for i := 0; i < count-1; i++ {
 
 		selectIdx := i
 
-		for j := i + 1; j < n; j++ {
+		for j := i + 1; j < count; j++ {
 			if order == "desc" {
 				if data[j].Cost > data[selectIdx].Cost {
 					selectIdx = j
@@ -460,11 +497,11 @@ func SelectionSortCostSlice(data []Destination, order string) {
 
 // INSERTION SORT
 // Mengurutkan destinasi berdasarkan jarak
-func InsertionSortByDistance() []Destination {
+func InsertionSortByDistance() ([MAX_DATA]Destination, int) {
 
-	data := GetDestinations()
+	data, count := GetDestinations()
 
-	for i := 1; i < len(data); i++ {
+	for i := 1; i < count; i++ {
 
 		key := data[i]
 		j := i - 1
@@ -478,17 +515,17 @@ func InsertionSortByDistance() []Destination {
 		data[j+1] = key
 	}
 
-	return data
+	return data, count
 }
 
 
 // INSERTION SORT BERDASARKAN ID
 // Digunakan untuk Binary Search
-func InsertionSortByID() []Destination {
+func InsertionSortByID() ([MAX_DATA]Destination, int) {
 
-	data := GetDestinations()
+	data, count := GetDestinations()
 
-	for i := 1; i < len(data); i++ {
+	for i := 1; i < count; i++ {
 
 		key := data[i]
 		j := i - 1
@@ -502,16 +539,16 @@ func InsertionSortByID() []Destination {
 		data[j+1] = key
 	}
 
-	return data
+	return data, count
 }
 
 // BINARY SEARCH
 func BinarySearchById(targetID string) (Destination, bool) {
 
-	data := InsertionSortByID()
+	data, count := InsertionSortByID()
 
 	low := 0
-	high := len(data) - 1
+	high := count - 1
 
 	for low <= high {
 		mid := (low + high) / 2
@@ -529,9 +566,9 @@ func BinarySearchById(targetID string) (Destination, bool) {
 
 // InsertionSortDistanceSlice mengurutkan destinasi berdasarkan jarak (in-place)
 // order: "asc" = terdekat dulu, "desc" = terjauh dulu
-func InsertionSortDistanceSlice(data []Destination, order string) {
+func InsertionSortDistanceSlice(data *[MAX_DATA]Destination, count int, order string) {
 
-	for i := 1; i < len(data); i++ {
+	for i := 1; i < count; i++ {
 
 		
 		key := data[i]
@@ -557,9 +594,9 @@ func InsertionSortDistanceSlice(data []Destination, order string) {
 
 // InsertionSortFacilitiesSlice mengurutkan destinasi berdasarkan jumlah fasilitas 
 // order: "desc" = terlengkap dulu, "asc" = tersedikit dulu
-func InsertionSortFacilitiesSlice(data []Destination, order string) {
+func InsertionSortFacilitiesSlice(data *[MAX_DATA]Destination, count int, order string) {
 
-	for i := 1; i < len(data); i++ {
+	for i := 1; i < count; i++ {
 
 		key := data[i]
 		keyLen := len(key.Facilities)

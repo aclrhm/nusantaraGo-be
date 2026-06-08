@@ -36,8 +36,8 @@ func getDestinationsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	allDestinations := GetDestinations()
-	sendJSON(w, http.StatusOK, allDestinations)
+	allDestinations, count := GetDestinations()
+	sendJSON(w, http.StatusOK, allDestinations[:count])
 }
 
 // getDestinationByIDHandler mengembalikan satu destinasi berdasarkan ID
@@ -177,17 +177,21 @@ func binarySearchHandler(w http.ResponseWriter, r *http.Request) {
 
 	if category != "" {
 		if category == "semua" {
-			sendJSON(w, http.StatusOK, GetDestinations())
+			all, count := GetDestinations()
+			sendJSON(w, http.StatusOK, all[:count])
 			return
 		}
-		all := GetDestinations()
-		results := []Destination{}
-		for _, d := range all {
+		all, count := GetDestinations()
+		var results [MAX_DATA]Destination
+		var resCount int
+		for i := 0; i < count; i++ {
+			d := all[i]
 			if strings.ToLower(d.Category) == category {
-				results = append(results, d)
+				results[resCount] = d
+				resCount++
 			}
 		}
-		sendJSON(w, http.StatusOK, results)
+		sendJSON(w, http.StatusOK, results[:resCount])
 		return
 	}
 
@@ -220,8 +224,8 @@ func sequentialSearchHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if keyword != "" {
-		results := SequentialSearchByKeyword(keyword)
-		sendJSON(w, http.StatusOK, results)
+		results, count := SequentialSearchByKeyword(keyword)
+		sendJSON(w, http.StatusOK, results[:count])
 		return
 	}
 
@@ -275,10 +279,10 @@ func selectionSortCostHandler(w http.ResponseWriter, r *http.Request) {
 		order = "asc"
 	}
 
-	data := GetDestinations()
-	SelectionSortCostSlice(data, order)
+	data, count := GetDestinations()
+	SelectionSortCostSlice(&data, count, order)
 
-	sendJSON(w, http.StatusOK, data)
+	sendJSON(w, http.StatusOK, data[:count])
 }
 
 // insertionSortDistanceHandler menangani pengurutan berdasarkan jarak (Insertion Sort)
@@ -294,10 +298,10 @@ func insertionSortDistanceHandler(w http.ResponseWriter, r *http.Request) {
 		order = "asc"
 	}
 
-	data := GetDestinations()
-	InsertionSortDistanceSlice(data, order)
+	data, count := GetDestinations()
+	InsertionSortDistanceSlice(&data, count, order)
 
-	sendJSON(w, http.StatusOK, data)
+	sendJSON(w, http.StatusOK, data[:count])
 }
 
 // insertionSortFacilitiesHandler menangani pengurutan berdasarkan jumlah fasilitas (Insertion Sort)
@@ -313,8 +317,8 @@ func insertionSortFacilitiesHandler(w http.ResponseWriter, r *http.Request) {
 		order = "desc"
 	}
 
-	data := GetDestinations()
-	InsertionSortFacilitiesSlice(data, order)
+	data, count := GetDestinations()
+	InsertionSortFacilitiesSlice(&data, count, order)
 
-	sendJSON(w, http.StatusOK, data)
+	sendJSON(w, http.StatusOK, data[:count])
 }

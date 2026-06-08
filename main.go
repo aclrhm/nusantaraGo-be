@@ -31,7 +31,7 @@ func main() {
 	mux.HandleFunc("OPTIONS /api/destinations",      func(w http.ResponseWriter, r *http.Request) { enableCORS(w, r) })
 	mux.HandleFunc("OPTIONS /api/destinations/{id}", func(w http.ResponseWriter, r *http.Request) { enableCORS(w, r) })
 
-	port := "8081"
+	port := "8080"
 	serverAddr := fmt.Sprintf("0.0.0.0:%s", port)
 
 	fmt.Println("APLIKASI PARIWISATA BACKEND (GOLANG) RUNNING")
