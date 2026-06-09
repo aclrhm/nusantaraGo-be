@@ -24,9 +24,10 @@ type Destination struct {
 	ImageURL    string   `json:"imageUrl" firestore:"imageUrl"`
 }
 
+//batas maximum data lokal json
 const MAX_DATA = 100
 
-// DestList adalah alias untuk array statis destinasi
+// Alias
 type DestList = [MAX_DATA]Destination
 
 var (
@@ -309,23 +310,6 @@ func BinarySearchById(targetID string) (Destination, bool) {
 	return Destination{}, false
 }
 
-// SELECTION SORT
-// Mengurutkan destinasi berdasarkan biaya tiket
-func SelectionSortByCost() (DestList, int) {
-	data, count := GetDestinations()
-
-	for i := 0; i < count-1; i++ {
-		minIdx := i
-		for j := i + 1; j < count; j++ {
-			if data[j].Cost < data[minIdx].Cost {
-				minIdx = j
-			}
-		}
-		data[i], data[minIdx] = data[minIdx], data[i]
-	}
-
-	return data, count
-}
 
 // SelectionSortCostSlice mengurutkan destinasi berdasarkan biaya (in-place)
 func SelectionSortCostSlice(data *DestList, count int, order string) {
@@ -346,23 +330,6 @@ func SelectionSortCostSlice(data *DestList, count int, order string) {
 	}
 }
 
-// INSERTION SORT
-// Mengurutkan destinasi berdasarkan jarak
-func InsertionSortByDistance() (DestList, int) {
-	data, count := GetDestinations()
-
-	for i := 1; i < count; i++ {
-		key := data[i]
-		j := i - 1
-		for j >= 0 && data[j].Distance > key.Distance {
-			data[j+1] = data[j]
-			j--
-		}
-		data[j+1] = key
-	}
-
-	return data, count
-}
 
 // INSERTION SORT BERDASARKAN ID
 // Digunakan untuk Binary Search
