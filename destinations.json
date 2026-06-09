@@ -136,5 +136,25 @@
       "dll"
     ],
     "imageUrl": "https://images.unsplash.com/photo-1623237243541-8a5a0445721b?q=80\u0026w=1470\u0026auto=format\u0026fit=crop\u0026ixlib=rb-4.1.0\u0026ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
+  },
+  {
+    "id": "dest-357600",
+    "name": "Kebun Raya Bogor",
+    "category": "Rekreasi",
+    "cost": 45000,
+    "distance": 11,
+    "location": "Bogor, Jawa Barat",
+    "description": "Kebun Raya Bogor yang terletak di Bogor, Jawa Barat",
+    "facilities": [
+      "Toilet",
+      "Masjid",
+      "Istana Bogor",
+      "Parkir"
+    ],
+    "rides": [
+      "Rental Skuter",
+      "Rental Sepeda"
+    ],
+    "imageUrl": "https://images.unsplash.com/photo-1656693156830-0a281c6f866c?q=80\u0026w=1470\u0026auto=format\u0026fit=crop\u0026ixlib=rb-4.1.0\u0026ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
   }
 ]

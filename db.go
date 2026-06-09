@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -9,14 +8,6 @@ import (
 	"os"
 	"strings"
 	"sync"
-	"time"
-
-	"cloud.google.com/go/firestore"
-	firebase "firebase.google.com/go/v4"
-	"google.golang.org/api/iterator"
-	"google.golang.org/api/option"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 // struct
@@ -35,85 +26,23 @@ type Destination struct {
 
 const MAX_DATA = 100
 
+// DestList adalah alias untuk array statis destinasi
+type DestList = [MAX_DATA]Destination
+
 var (
-	// array statis untuk mode JSON lokal
-	destinations      [MAX_DATA]Destination
+	destinations      DestList
 	destinationsCount int
 	dbMutex           sync.RWMutex
 	dbFilePath        = "destinations.json"
-
-	// Firebase Firestore Variables
-	firestoreClient *firestore.Client
-	isFirebaseMode  = false
-	ctxTimeout      = 10 * time.Second
 )
 
-// InitDB menginisialisasi database
+// InitDB menginisialisasi database lokal berbasis JSON (Array statis)
 func InitDB() error {
-	ctx, cancel := context.WithTimeout(context.Background(), ctxTimeout)
-	defer cancel()
-
-	// 1. Periksa apakah file service account key Firebase ada
-	credentialPath := "serviceAccountKey.json"
-	if _, err := os.Stat(credentialPath); err == nil {
-		fmt.Println("Menghubungkan ke Firebase Firestore Cloud Database...")
-		
-		opt := option.WithCredentialsFile(credentialPath)
-		app, err := firebase.NewApp(ctx, nil, opt)
-		if err != nil {
-			return fmt.Errorf("gagal menginisialisasi firebase app: %w", err)
-		}
-
-		client, err := app.Firestore(ctx)
-		if err != nil {
-			return fmt.Errorf("gagal mendapatkan client firestore: %w", err)
-		}
-
-		firestoreClient = client
-		isFirebaseMode = true
-		fmt.Println("SUKSES: NusantaraGo terhubung ke Cloud Firebase Firestore!")
-		
-		// Lakukan seeding otomatis di cloud jika koleksi destinations masih kosong
-		err = seedFirestoreIfNeeded(ctx)
-		if err != nil {
-			fmt.Printf("Peringatan: Gagal memeriksa/seeding Firestore: %v\n", err)
-		}
-		return nil
-	}
-
-	// 2. Jika serviceAccountKey tidak ditemukan, jalankan Mode Fallback JSON Lokal
-	fmt.Println("PERINGATAN: File 'serviceAccountKey.json' tidak ditemukan.")
-	fmt.Println("NusantaraGo diaktifkan dalam MODE SIMULASI JSON LOKAL.")
+	fmt.Println("NusantaraGo diaktifkan dalam MODE JSON LOKAL.")
 	fmt.Println("Semua data tersimpan aman secara offline di file 'destinations.json'.")
-	fmt.Println("Anda tetap dapat menguji CRUD, Filter, Search, dan Sorting secara utuh!")
-	
 	return initLocalJSONDB()
 }
 
-// seedFirestoreIfNeeded mengisi data awal di Firestore jika koleksi kosong
-func seedFirestoreIfNeeded(ctx context.Context) error {
-	// Cek apakah ada dokumen di koleksi "destinations"
-	iter := firestoreClient.Collection("destinations").Limit(1).Documents(ctx)
-	defer iter.Stop()
-	_, err := iter.Next()
-	
-	if err == iterator.Done {
-		// Koleksi kosong, lakukan seeding
-		fmt.Println("Koleksi Firestore kosong. Melakukan seeding data awal ke cloud...")
-		seedData, count := getSeedData()
-		for i := 0; i < count; i++ {
-			dest := seedData[i]
-			_, err := firestoreClient.Collection("destinations").Doc(dest.ID).Set(ctx, dest)
-			if err != nil {
-				return fmt.Errorf("gagal menyemai destinasi %s: %w", dest.ID, err)
-			}
-		}
-		fmt.Printf("Sukses mengunggah %d data awal pariwisata ke Firebase Firestore!\n", count)
-	}
-	return nil
-}
-
-// array statis
 func initLocalJSONDB() error {
 	dbMutex.Lock()
 	defer dbMutex.Unlock()
@@ -169,8 +98,8 @@ func saveToFileLocked() error {
 }
 
 // getSeedData menyediakan data pariwisata inisial Indonesia
-func getSeedData() ([MAX_DATA]Destination, int) {
-	var data [MAX_DATA]Destination
+func getSeedData() (DestList, int) {
+	var data DestList
 	data[0] = Destination{
 		ID:          "dest-1",
 		Name:        "Candi Borobudur",
@@ -231,76 +160,30 @@ func getSeedData() ([MAX_DATA]Destination, int) {
 		Rides:       []string{"Diving (Menyelam)", "Snorkeling Bersama Penyu", "Island Hopping (Jelajah Pulau)"},
 		ImageURL:    "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=800&q=80",
 	}
-	return data, 5
+	data[5] = Destination{
+		ID:          "dest-6",
+		Name:        "Kebun Raya Bogor",
+		Category:    "Alam",
+		Cost:        25000,
+		Distance:    60.0,
+		Location:    "Bogor, Jawa Barat",
+		Description: "Salah satu kebun raya tertua dan terbesar di Asia Tenggara yang didirikan sejak tahun 1817. Menawarkan koleksi ribuan spesies tanaman tropis yang rimbun dan segar di tengah kota Bogor.",
+		Facilities:  []string{"Area Parkir Luas", "Toilet Bersih", "Mushola", "Pusat Informasi", "Toko Souvenir", "Kafe & Resto"},
+		Rides:       []string{"Wisata Sepeda Keliling", "Tram Kebun Raya", "Museum Zoologi"},
+		ImageURL:    "https://images.unsplash.com/photo-1585320806297-9794b3e4aaae?auto=format&fit=crop&w=800&q=80",
+	}
+	return data, 6
 }
 
 // GetDestinations membaca semua destinasi
-func GetDestinations() ([MAX_DATA]Destination, int) {
-	if isFirebaseMode {
-		return getDestinationsFromFirestore()
-	}
-
+func GetDestinations() (DestList, int) {
 	dbMutex.RLock()
 	defer dbMutex.RUnlock()
 	return destinations, destinationsCount
 }
 
-func getDestinationsFromFirestore() ([MAX_DATA]Destination, int) {
-	ctx, cancel := context.WithTimeout(context.Background(), ctxTimeout)
-	defer cancel()
-
-	var results [MAX_DATA]Destination
-	var count int
-	iter := firestoreClient.Collection("destinations").Documents(ctx)
-	defer iter.Stop()
-
-	done := false
-	for !done {
-		doc, err := iter.Next()
-		if err == iterator.Done {
-			done = true
-		} else if err != nil {
-			fmt.Printf("Gagal membaca dokumen Firestore: %v\n", err)
-			done = true
-		} else {
-			var dest Destination
-			if err := doc.DataTo(&dest); err != nil {
-				fmt.Printf("Gagal mengurai dokumen Firestore: %v\n", err)
-			} else {
-				if count < MAX_DATA {
-					results[count] = dest
-					count++
-				}
-			}
-		}
-	}
-
-	return results, count
-}
 // GetDestinationByID mencari destinasi berdasarkan ID
 func GetDestinationByID(id string) (Destination, bool) {
-	if isFirebaseMode {
-		ctx, cancel := context.WithTimeout(context.Background(), ctxTimeout)
-		defer cancel()
-
-		doc, err := firestoreClient.Collection("destinations").Doc(id).Get(ctx)
-		if err != nil {
-			if status.Code(err) == codes.NotFound {
-				return Destination{}, false
-			}
-			fmt.Printf("Gagal membaca dokumen Firestore %s: %v\n", id, err)
-			return Destination{}, false
-		}
-
-		var dest Destination
-		err = doc.DataTo(&dest)
-		if err != nil {
-			return Destination{}, false
-		}
-		return dest, true
-	}
-
-	// Local JSON fallback
 	dbMutex.RLock()
 	defer dbMutex.RUnlock()
 	for i := 0; i < destinationsCount; i++ {
@@ -313,18 +196,6 @@ func GetDestinationByID(id string) (Destination, bool) {
 
 // CreateDestination menambahkan destinasi baru
 func CreateDestination(d Destination) error {
-	if isFirebaseMode {
-		ctx, cancel := context.WithTimeout(context.Background(), ctxTimeout)
-		defer cancel()
-
-		_, err := firestoreClient.Collection("destinations").Doc(d.ID).Set(ctx, d)
-		if err != nil {
-			return fmt.Errorf("gagal menambahkan dokumen ke Firestore: %w", err)
-		}
-		return nil
-	}
-
-	// Local JSON fallback
 	dbMutex.Lock()
 	defer dbMutex.Unlock()
 	if d.Name == "" || d.Category == "" {
@@ -340,19 +211,6 @@ func CreateDestination(d Destination) error {
 
 // UpdateDestination mengubah destinasi yang ada berdasarkan ID
 func UpdateDestination(id string, updated Destination) error {
-	if isFirebaseMode {
-		ctx, cancel := context.WithTimeout(context.Background(), ctxTimeout)
-		defer cancel()
-
-		updated.ID = id
-		_, err := firestoreClient.Collection("destinations").Doc(id).Set(ctx, updated)
-		if err != nil {
-			return fmt.Errorf("gagal mengubah dokumen di Firestore: %w", err)
-		}
-		return nil
-	}
-
-	// Local JSON fallback
 	dbMutex.Lock()
 	defer dbMutex.Unlock()
 	for i := 0; i < destinationsCount; i++ {
@@ -367,18 +225,6 @@ func UpdateDestination(id string, updated Destination) error {
 
 // DeleteDestination menghapus destinasi berdasarkan ID
 func DeleteDestination(id string) error {
-	if isFirebaseMode {
-		ctx, cancel := context.WithTimeout(context.Background(), ctxTimeout)
-		defer cancel()
-
-		_, err := firestoreClient.Collection("destinations").Doc(id).Delete(ctx)
-		if err != nil {
-			return fmt.Errorf("gagal menghapus dokumen dari Firestore: %w", err)
-		}
-		return nil
-	}
-
-	// Local JSON fallback
 	dbMutex.Lock()
 	defer dbMutex.Unlock()
 	for i := 0; i < destinationsCount; i++ {
@@ -393,26 +239,21 @@ func DeleteDestination(id string) error {
 	return fmt.Errorf("destinasi dengan ID %s tidak ditemukan", id)
 }
 
-
-
 // SEQUENTIAL SEARCH
 func SequentialSearchByID(targetID string) (Destination, bool) {
-
 	data, count := GetDestinations()
-
 	for i := 0; i < count; i++ {
 		if data[i].ID == targetID {
 			return data[i], true
 		}
 	}
-
 	return Destination{}, false
 }
 
 // SEQUENTIAL SEARCH KEYWORD
-func SequentialSearchByKeyword(query string) ([MAX_DATA]Destination, int) {
+func SequentialSearchByKeyword(query string) (DestList, int) {
 	data, count := GetDestinations()
-	var results [MAX_DATA]Destination
+	var results DestList
 	var resCount int
 	lowerQuery := strings.ToLower(strings.TrimSpace(query))
 
@@ -420,7 +261,7 @@ func SequentialSearchByKeyword(query string) ([MAX_DATA]Destination, int) {
 		dest := data[i]
 		matchName := strings.Contains(strings.ToLower(dest.Name), lowerQuery)
 		matchDesc := strings.Contains(strings.ToLower(dest.Description), lowerQuery)
-		matchLoc  := strings.Contains(strings.ToLower(dest.Location), lowerQuery)
+		matchLoc := strings.Contains(strings.ToLower(dest.Location), lowerQuery)
 
 		matchFac := false
 		for _, fac := range dest.Facilities {
@@ -447,102 +288,8 @@ func SequentialSearchByKeyword(query string) ([MAX_DATA]Destination, int) {
 	return results, resCount
 }
 
-// SELECTION SORT
-// Mengurutkan destinasi berdasarkan biaya tiket
-func SelectionSortByCost() ([MAX_DATA]Destination, int) {
-
-	data, count := GetDestinations()
-
-	for i := 0; i < count-1; i++ {
-
-		minIdx := i
-
-		for j := i + 1; j < count; j++ {
-
-			if data[j].Cost < data[minIdx].Cost {
-				minIdx = j
-			}
-		}
-
-		data[i], data[minIdx] = data[minIdx], data[i]
-	}
-
-	return data, count
-}
-
-// SelectionSortCostSlice mengurutkan destinasi berdasarkan biaya (in-place)
-func SelectionSortCostSlice(data *[MAX_DATA]Destination, count int, order string) {
-
-	for i := 0; i < count-1; i++ {
-
-		selectIdx := i
-
-		for j := i + 1; j < count; j++ {
-			if order == "desc" {
-				if data[j].Cost > data[selectIdx].Cost {
-					selectIdx = j
-				}
-			} else {
-				if data[j].Cost < data[selectIdx].Cost {
-					selectIdx = j
-				}
-			}
-		}
-
-		data[i], data[selectIdx] = data[selectIdx], data[i]
-	}
-}
-
-// INSERTION SORT
-// Mengurutkan destinasi berdasarkan jarak
-func InsertionSortByDistance() ([MAX_DATA]Destination, int) {
-
-	data, count := GetDestinations()
-
-	for i := 1; i < count; i++ {
-
-		key := data[i]
-		j := i - 1
-
-		for j >= 0 && data[j].Distance > key.Distance {
-
-			data[j+1] = data[j]
-			j--
-		}
-
-		data[j+1] = key
-	}
-
-	return data, count
-}
-
-
-// INSERTION SORT BERDASARKAN ID
-// Digunakan untuk Binary Search
-func InsertionSortByID() ([MAX_DATA]Destination, int) {
-
-	data, count := GetDestinations()
-
-	for i := 1; i < count; i++ {
-
-		key := data[i]
-		j := i - 1
-
-		for j >= 0 && data[j].ID > key.ID {
-
-			data[j+1] = data[j]
-			j--
-		}
-
-		data[j+1] = key
-	}
-
-	return data, count
-}
-
 // BINARY SEARCH
 func BinarySearchById(targetID string) (Destination, bool) {
-
 	data, count := InsertionSortByID()
 
 	low := 0
@@ -562,18 +309,85 @@ func BinarySearchById(targetID string) (Destination, bool) {
 	return Destination{}, false
 }
 
-// InsertionSortDistanceSlice mengurutkan destinasi berdasarkan jarak (in-place)
-// order: "asc" = terdekat dulu, "desc" = terjauh dulu
-func InsertionSortDistanceSlice(data *[MAX_DATA]Destination, count int, order string) {
+// SELECTION SORT
+// Mengurutkan destinasi berdasarkan biaya tiket
+func SelectionSortByCost() (DestList, int) {
+	data, count := GetDestinations()
+
+	for i := 0; i < count-1; i++ {
+		minIdx := i
+		for j := i + 1; j < count; j++ {
+			if data[j].Cost < data[minIdx].Cost {
+				minIdx = j
+			}
+		}
+		data[i], data[minIdx] = data[minIdx], data[i]
+	}
+
+	return data, count
+}
+
+// SelectionSortCostSlice mengurutkan destinasi berdasarkan biaya (in-place)
+func SelectionSortCostSlice(data *DestList, count int, order string) {
+	for i := 0; i < count-1; i++ {
+		selectIdx := i
+		for j := i + 1; j < count; j++ {
+			if order == "desc" {
+				if data[j].Cost > data[selectIdx].Cost {
+					selectIdx = j
+				}
+			} else {
+				if data[j].Cost < data[selectIdx].Cost {
+					selectIdx = j
+				}
+			}
+		}
+		data[i], data[selectIdx] = data[selectIdx], data[i]
+	}
+}
+
+// INSERTION SORT
+// Mengurutkan destinasi berdasarkan jarak
+func InsertionSortByDistance() (DestList, int) {
+	data, count := GetDestinations()
 
 	for i := 1; i < count; i++ {
-
-		
 		key := data[i]
-
 		j := i - 1
+		for j >= 0 && data[j].Distance > key.Distance {
+			data[j+1] = data[j]
+			j--
+		}
+		data[j+1] = key
+	}
 
+	return data, count
+}
 
+// INSERTION SORT BERDASARKAN ID
+// Digunakan untuk Binary Search
+func InsertionSortByID() (DestList, int) {
+	data, count := GetDestinations()
+
+	for i := 1; i < count; i++ {
+		key := data[i]
+		j := i - 1
+		for j >= 0 && data[j].ID > key.ID {
+			data[j+1] = data[j]
+			j--
+		}
+		data[j+1] = key
+	}
+
+	return data, count
+}
+
+// InsertionSortDistanceSlice mengurutkan destinasi berdasarkan jarak (in-place)
+// order: "asc" = terdekat dulu, "desc" = terjauh dulu
+func InsertionSortDistanceSlice(data *DestList, count int, order string) {
+	for i := 1; i < count; i++ {
+		key := data[i]
+		j := i - 1
 		if order == "desc" {
 			for j >= 0 && data[j].Distance < key.Distance {
 				data[j+1] = data[j]
@@ -585,21 +399,17 @@ func InsertionSortDistanceSlice(data *[MAX_DATA]Destination, count int, order st
 				j--
 			}
 		}
-
 		data[j+1] = key
 	}
 }
 
-// InsertionSortFacilitiesSlice mengurutkan destinasi berdasarkan jumlah fasilitas 
+// InsertionSortFacilitiesSlice mengurutkan destinasi berdasarkan jumlah fasilitas
 // order: "desc" = terlengkap dulu, "asc" = tersedikit dulu
-func InsertionSortFacilitiesSlice(data *[MAX_DATA]Destination, count int, order string) {
-
+func InsertionSortFacilitiesSlice(data *DestList, count int, order string) {
 	for i := 1; i < count; i++ {
-
 		key := data[i]
 		keyLen := len(key.Facilities)
 		j := i - 1
-
 		if order == "asc" {
 			for j >= 0 && len(data[j].Facilities) > keyLen {
 				data[j+1] = data[j]
@@ -611,7 +421,6 @@ func InsertionSortFacilitiesSlice(data *[MAX_DATA]Destination, count int, order 
 				j--
 			}
 		}
-
 		data[j+1] = key
 	}
 }
