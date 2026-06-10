@@ -24,7 +24,7 @@ type Destination struct {
 	ImageURL    string   `json:"imageUrl" firestore:"imageUrl"`
 }
 
-//batas maximum data lokal json
+// batas maximum data lokal json
 const MAX_DATA = 100
 
 // Alias
@@ -289,6 +289,24 @@ func SequentialSearchByKeyword(query string) (DestList, int) {
 	return results, resCount
 }
 
+// INSERTION SORT BERDASARKAN ID
+// Digunakan untuk Binary Search
+func InsertionSortByID() (DestList, int) {
+	data, count := GetDestinations()
+
+	for i := 1; i < count; i++ {
+		key := data[i]
+		j := i - 1
+		for j >= 0 && data[j].ID > key.ID {
+			data[j+1] = data[j]
+			j--
+		}
+		data[j+1] = key
+	}
+
+	return data, count
+}
+
 // BINARY SEARCH
 func BinarySearchById(targetID string) (Destination, bool) {
 	data, count := InsertionSortByID()
@@ -310,7 +328,6 @@ func BinarySearchById(targetID string) (Destination, bool) {
 	return Destination{}, false
 }
 
-
 // SelectionSortCostSlice mengurutkan destinasi berdasarkan biaya (in-place)
 func SelectionSortCostSlice(data *DestList, count int, order string) {
 	for i := 0; i < count-1; i++ {
@@ -328,25 +345,6 @@ func SelectionSortCostSlice(data *DestList, count int, order string) {
 		}
 		data[i], data[selectIdx] = data[selectIdx], data[i]
 	}
-}
-
-
-// INSERTION SORT BERDASARKAN ID
-// Digunakan untuk Binary Search
-func InsertionSortByID() (DestList, int) {
-	data, count := GetDestinations()
-
-	for i := 1; i < count; i++ {
-		key := data[i]
-		j := i - 1
-		for j >= 0 && data[j].ID > key.ID {
-			data[j+1] = data[j]
-			j--
-		}
-		data[j+1] = key
-	}
-
-	return data, count
 }
 
 // InsertionSortDistanceSlice mengurutkan destinasi berdasarkan jarak (in-place)
